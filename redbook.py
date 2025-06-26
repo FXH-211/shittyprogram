@@ -1,9 +1,26 @@
 import streamlit as st
 from openai import OpenAI
+import requests
+
+# 设置页面布局
+st.set_page_config(page_title="高考志愿填报助手", layout="wide")
+
+def check_url(url: str) -> bool:
+    try:
+        response = requests.get(url, timeout=5)  # 设置超时时间为5秒
+        return response.status_code == 200
+    except requests.RequestException as e:
+        st.sidebar.warning(f"无法访问 {url}，错误信息：{str(e)}")
+        return False
 
 def generate_content(score, preferred_major):
+    base_url = 'https://api.deepseek.com'
+    if not check_url(base_url):
+        st.sidebar.warning("无法访问 DeepSeek API，可能是网页链接的合法性或网络连接问题。请检查链接或稍后重试。")
+        return "请检查您的网络连接或 API 配置，并重试。"
+
     try:
-        client = OpenAI(base_url='https://api.deepseek.com', api_key=st.secrets['API_KEY'])
+        client = OpenAI(base_url=base_url, api_key=st.secrets['API_KEY'])
         response = client.chat.completions.create(
             model='deepseek-chat',
             temperature=0.2,
@@ -58,7 +75,7 @@ sys_prompt = '''你是一位精通高考大数据分析的高级规划师，需�
 中立建议：不引导考生选择特定院校或专业，仅客观对比优劣。
 '''
 
-st.write('# 高考志愿填报助手')
+st.title('高考志愿填报助手')
 col1, col2 = st.columns(2)
 with col1:
     score = st.text_input(label='请输入分数', placeholder='例如：580')
