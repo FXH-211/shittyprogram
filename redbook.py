@@ -24,7 +24,7 @@ def generate_content(score, province, preferred_major):
     try:
         client = OpenAI(base_url=base_url, api_key=st.secrets['API_KEY'])
         response = client.chat.completions.create(
-            model='deepseek-chat',
+            model='deepseek-reasoner',
             temperature=0.2,
             frequency_penalty=0.5,
             max_tokens=512,
