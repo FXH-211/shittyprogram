@@ -5,6 +5,7 @@ import requests
 # 设置页面布局
 st.set_page_config(page_title="高考志愿填报助手", layout="wide")
 
+# 定义检查 URL 是否可用的函数
 def check_url(url: str) -> bool:
     try:
         response = requests.get(url, timeout=5)  # 设置超时时间为5秒
@@ -13,8 +14,9 @@ def check_url(url: str) -> bool:
         st.sidebar.warning(f"无法访问 {url}，错误信息：{str(e)}")
         return False
 
-def generate_content(score, preferred_major):
-    base_url = 'https://api.deepseek.com'
+# 定义生成内容的函数
+def generate_content(score, province, preferred_major):
+    base_url = "https://api.deepseek.com"  # 替换为实际的 API 地址
     if not check_url(base_url):
         st.sidebar.warning("无法访问 DeepSeek API，可能是网页链接的合法性或网络连接问题。请检查链接或稍后重试。")
         return "请检查您的网络连接或 API 配置，并重试。"
@@ -28,7 +30,7 @@ def generate_content(score, preferred_major):
             max_tokens=512,
             messages=[
                 {'role': 'system', 'content': sys_prompt},
-                {'role': 'user', 'content': f"分数：{score.strip()}, 喜欢的专业：{preferred_major.strip()}"},
+                {'role': 'user', 'content': f"省份：{province.strip()}, 分数：{score.strip()}, 喜欢的专业：{preferred_major.strip()}"},
             ]
         )
         return response.choices[0].message.content
@@ -36,6 +38,7 @@ def generate_content(score, preferred_major):
         st.error(f"无法访问 API 或处理请求：{str(e)}")
         return "请检查您的网络连接或 API 配置，并重试。"
 
+# 系统提示
 sys_prompt = '''你是一位精通高考大数据分析的高级规划师，需同时具备：
 1) 全国各省各批次分数线实时查询能力 
 2) 院校三维对比功能（学科实力/就业率/区位优势）
@@ -75,13 +78,47 @@ sys_prompt = '''你是一位精通高考大数据分析的高级规划师，需�
 中立建议：不引导考生选择特定院校或专业，仅客观对比优劣。
 '''
 
+# 页面标题
 st.title('高考志愿填报助手')
+
+# 使用两列布局
 col1, col2 = st.columns(2)
+
+# 第一列：用户输入信息
 with col1:
-    score = st.text_input(label='请输入分数', placeholder='例如：580')
-    preferred_major = st.text_input(label='请输入喜欢的专业', placeholder='例如：计算机科学')
-    button = st.button('确定', type='primary')
-    placeholder = st.empty()
-    if button and score.strip() and preferred_major.strip():
-        content = generate_content(score, preferred_major)
-        placeholder.markdown(content)
+    st.subheader("请输入您的信息")
+    province = st.text_input(label='所在省份', placeholder='例如：江苏')
+    score = st.text_input(label='高考分数', placeholder='例如：580')
+    preferred_major = st.text_input(label='喜欢的专业', placeholder='例如：计算机科学')
+    button = st.button('生成志愿方案', type='primary')
+
+# 第二列：显示结果
+with col2:
+    if button and score.strip() and province.strip() and preferred_major.strip():
+        st.subheader("志愿填报建议")
+        content = generate_content(score, province, preferred_major)
+        st.markdown(content)
+
+# 页面美化
+st.markdown(
+    """
+    <style>
+        .stButton>button {
+            background-color: #007BFF;
+            color: white;
+        }
+        .stButton>button:hover {
+            background-color: #0056b3;
+        }
+        .stTextInput>div>div>input {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .stMarkdown {
+            font-size: 16px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
