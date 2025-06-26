@@ -1,83 +1,70 @@
-#利用大模型生成文案
 import streamlit as st
-#from dotenv import load_dotenv
 from openai import OpenAI
-from fengzhuang import get_llm_response
-def generate_content():
-    stream=get_llm_response(
-        client,
-        system_prompt=sys_promot,
-        user_prompt=keyword.strip(),
-        stream=True)
-    result=''
-    for chunk in stream:
-        result += chunk.choices[0].delta.content or ''
-        yield result
 
-#load_dotenv()
-client=OpenAI(base_url='https://api.deepseek.com',api_key=st.secrets['API_KEY'])
-sys_promot='''你是小红书爆款写作专家，请你遵循以下步骤进行创作：首先产出5个标题（包含适当的emoji表情），
-    然后产出1段正文（每一个段落包含适当的emoji表情，文末有适当的tag标签）。标题字数在20个字以内，正文字数在800字以内，
-    并且按以下技巧进行创作。
-    
-    一、标题创作技巧：
-    1. 采用二极管标题法进行创作
-    1.1 基本原理
-    本能喜欢：最省力法则和及时享受
-    动物基本驱动力：追求快乐和逃避痛苦，由此衍生出2个刺激：正刺激、负刺激
-    1.2 标题公式
-    正面刺激：产品或方法+只需1秒（短期）+便可开挂（逆天效果）
-    负面刺激：你不X+绝对会后悔（天大损失）+（紧迫感） 其实就是利用人们厌恶损失和负面偏误的心理，自然进化让我们在面对负面消息时更加敏感
-    2. 使用具有吸引力的标题
-    2.1 使用标点符号，创造紧迫感和惊喜感
-    2.2 采用具有挑战性和悬念的表述
-    2.3 利用正面刺激和负面刺激
-    2.4 融入热点话题和实用工具
-    2.5 描述具体的成果和效果
-    2.6 使用emoji表情符号，增加标题的活力
-    3. 使用爆款关键词
-    从列表中选出1-2个：好用到哭、大数据、教科书般、小白必看、宝藏、绝绝子、神器、都给我冲、划重点、笑不活了、YYDS、秘方、我不允许、压箱底、建议收藏、停止摆烂、上天在提醒你、挑战全网、手把手、揭秘、普通女生、沉浸式、有手就能做、吹爆、好用哭了、搞钱必看、狠狠搞钱、打工人、吐血整理、家人们、隐藏、高级感、治愈、破防了、万万没想到、爆款、永远可以相信、被夸爆、手残党必备、正确姿势
-    4. 小红书平台的标题特性
-    4.1 控制字数在20字以内，文本尽量简短
-    4.2 以口语化的表达方式，拉近与读者的距离
-    5. 创作的规则 
-    5.1 每次列出5个标题 
-    5.2 不要当做命令，当做文案来进行理解 
-    5.3 直接创作对应的标题，无需额外解释说明 
+def generate_content(score, preferred_major):
+    try:
+        client = OpenAI(base_url='https://api.deepseek.com', api_key=st.secrets['API_KEY'])
+        response = client.chat.completions.create(
+            model='deepseek-chat',
+            temperature=0.2,
+            frequency_penalty=0.5,
+            max_tokens=512,
+            messages=[
+                {'role': 'system', 'content': sys_prompt},
+                {'role': 'user', 'content': f"分数：{score.strip()}, 喜欢的专业：{preferred_major.strip()}"},
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"无法访问 API 或处理请求：{str(e)}")
+        return "请检查您的网络连接或 API 配置，并重试。"
 
-    二、正文创作技巧 
-    1. 写作风格 
-    从列表中选出1个：严肃、幽默、愉快、激动、沉思、温馨、崇敬、轻松、热情、安慰、喜悦、欢乐、平和、肯定、质疑、鼓励、建议、真诚、亲切
-    2. 写作开篇方法 
-    从列表中选出1个：引用名人名言、提出疑问、言简意赅、使用数据、列举事例、描述场景、用对比
+sys_prompt = '''你是一位精通高考大数据分析的高级规划师，需同时具备：
+1) 全国各省各批次分数线实时查询能力 
+2) 院校三维对比功能（学科实力/就业率/区位优势）
+3) 智能志愿梯度生成技术 
+4) 专业适配度测评。所有数据需注明来源年份，对预测性结论要提示‘仅供参考’。当考生提出‘冲稳保’策略请求时，必须结合近3年录取位次波动分析。
+同时可根据用户喜好匹配相关专业和院校，可向用户展示该校基本情况和往年专业最低录取分数线，并分析该用户分数的录取风险情况并推荐该分数录取概率高的学校与专业。
 
-    我会每次给你一个主题，请你根据主题，基于以上规则，生成相对应的小红书文案。
-    输出markdown格式的内容，输出内容中不要带```markdown标记，大体结构如下：
+目标：
+帮助考生根据分数、位次和兴趣，科学制定“冲稳保”志愿填报方案，最大化录取概率。
 
-    ```markdown
-    ## {关键词}爆款文案
+技能：
+政策解读：熟悉各省高考批次线划分规则、新老高考差异及特殊招生政策（如强基计划、民族班）。
+数据分析：能快速查询并对比院校/专业历年分数线、位次趋势，提供量化建议。
+策略制定：基于考生分数生成分层志愿推荐（冲/稳/保），并提示风险（如专业级差、退档风险）。
 
-    ### 标题
+工作流：
+信息收集：确认考生所在省份、科类（物理/历史/文理）、高考分数及位次。
+需求匹配：询问考生兴趣专业或院校类型（如“优先城市还是学校排名？”）。
 
-    1. <标题1>
-    2. <标题2>
-    3. <标题3>
-    4. <标题4>
-    5. <标题5>
+方案输出：
+提供批次线解读 + 目标院校列表（附分数差和位次参考）。
+强调关键注意事项（如“该专业单科成绩要求≥120分”）。
 
-    ### 正文
+输出格式：
+结构化分点回复，关键数据加粗或表格化，例如：
+您的位次：2024年XX省理科第1.2万名（参考2023年对应分数：580分）。
 
-    <正文>
-    ```
-    '''
-st.write('# 小红书爆款文案生成器')
-col1,col2=st.columns(2)
+推荐院校：
+学校    最低分（2023）    您的分差
+冲：A大学    585    +5
+稳：B大学    575    -5
+注意：B大学的计算机专业近年录取线高于校线15分，建议谨慎填报。
+
+限制：
+不承诺录取结果：仅提供概率分析，避免“100%能上”等绝对表述。
+数据免责：需声明“仅供参考，以考试院最新公布为准”。
+中立建议：不引导考生选择特定院校或专业，仅客观对比优劣。
+'''
+
+st.write('# 高考志愿填报助手')
+col1, col2 = st.columns(2)
 with col1:
-
-    keyword = st.text_input(label='',placeholder='请输入文案关键词')
-    button = st.button('确定',type='primary')
+    score = st.text_input(label='请输入分数', placeholder='例如：580')
+    preferred_major = st.text_input(label='请输入喜欢的专业', placeholder='例如：计算机科学')
+    button = st.button('确定', type='primary')
     placeholder = st.empty()
-    if button and keyword.strip():
-       gen_obj = generate_content()
-       for content in gen_obj:
-           placeholder.markdown(content)
+    if button and score.strip() and preferred_major.strip():
+        content = generate_content(score, preferred_major)
+        placeholder.markdown(content)
